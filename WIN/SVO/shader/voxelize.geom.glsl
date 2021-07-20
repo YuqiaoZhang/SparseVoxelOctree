@@ -6,27 +6,32 @@
 //Geometry shader for scene voxelization
 //Using the method described in Ch. 22, OpenGL Insights
 
-# version 430
+#version 460 core
+
+#extension GL_GOOGLE_include_directive : require
+
+#include "./shader_uniform_location.h"
+
 
 layout ( triangles ) in;
 layout ( triangle_strip, max_vertices = 3 ) out;
 
-in vec3 v_vertex[];
-in vec3 v_normal[];
-in vec2 v_texcoord[];
+layout (location = 0) in vec3 v_vertex[];
+layout (location = 1) in vec3 v_normal[];
+layout (location = 2) in vec2 v_texcoord[];
 
-out vec3 f_normal;
-out vec3 f_pos;
-out vec2 f_texcoord;
+layout (location = 0) out vec3 f_normal;
+layout (location = 1) out vec3 f_pos;
+layout (location = 2) out vec2 f_texcoord;
 
-flat out int f_axis;   //indicate which axis the projection uses
-flat out vec4 f_AABB;
+layout (location = 3) flat out int f_axis;   //indicate which axis the projection uses
+layout (location = 4) flat out vec4 f_AABB;
 
-uniform mat4 u_MVPx;
-uniform mat4 u_MVPy;
-uniform mat4 u_MVPz;
-uniform int u_width;
-uniform int u_height;
+uniform layout (location = voxelizeShader_u_MVPx) mat4 u_MVPx;
+uniform layout (location = voxelizeShader_u_MVPy) mat4 u_MVPy;
+uniform layout (location = voxelizeShader_u_MVPz) mat4 u_MVPz;
+uniform layout (location = voxelizeShader_u_width) int u_width;
+uniform layout (location = voxelizeShader_u_height) int u_height;
 
 void main()
 {

@@ -4,9 +4,14 @@
 
 #include "glslUtility.h"
 
+#define GL_GLEXT_PROTOTYPES 1
+#include <GL/glcorearb.h>
+#include <GL/glx.h>
+
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <assert.h>
 
 using namespace std;
 
@@ -28,12 +33,12 @@ namespace glslUtility {
 			file.seekg (0, ios::beg);
 			file.read (memblock, size);
 			file.close();
-			cout << "file " << fname << " loaded" << endl;
+			printf("%s %s %s \n", "file", fname, "loaded");
 			text.assign(memblock);
 		}
 		else
 		{
-			cout << "Unable to open file " << fname << endl;
+			printf("%s %s \n", "Unable to open file", fname);
 			exit(1);
 		}
 		return memblock;
@@ -57,8 +62,8 @@ namespace glslUtility {
 			infoLog = new GLchar[infoLogLen];
 			// error check for fail to allocate memory omitted
 			glGetShaderInfoLog(shader,infoLogLen, &charsWritten, infoLog);
-			cout << "InfoLog:" << endl << infoLog << endl;
-			delete [] infoLog;
+			printf("%s \n %s \n", "InfoLog:", infoLog);
+			delete[] infoLog;
 		}
 
 		// should additionally check for OpenGL errors here
@@ -79,48 +84,60 @@ namespace glslUtility {
 			infoLog = new GLchar[infoLogLen];
 			// error check for fail to allocate memory omitted
 			glGetProgramInfoLog(prog,infoLogLen, &charsWritten, infoLog);
-			cout << "InfoLog:" << endl << infoLog << endl;
+			printf("%s \n %s \n", "InfoLog:", infoLog);
 			delete [] infoLog;
 		}
 	}
 
-    GLuint initshaders (GLenum type, const char *filename) 
-    {
-        GLuint shader = glCreateShader(type) ; 
-        GLint compiled ; 
-        char *ss;
-        GLint slen;
+	GLuint init_spv_shaders(GLenum type, const char *filename)
+	{
+		static PFNGLSPECIALIZESHADERPROC pfn_glSpecializeShader = NULL;
 
-        ss = loadFile(filename,slen);
-        const char * cs = ss;
-
-        glShaderSource (shader, 1, &cs, &slen) ; 
-        glCompileShader (shader) ; 
-        glGetShaderiv (shader, GL_COMPILE_STATUS, &compiled) ; 
-		if (!compiled)
+		if (NULL == pfn_glSpecializeShader)
 		{
-			cout << "Shader not compiled." << endl;
+			pfn_glSpecializeShader = (PFNGLSPECIALIZESHADERPROC)glXGetProcAddress((GLubyte const*)"glSpecializeShader");
+		}
+		assert(NULL != pfn_glSpecializeShader);
+
+		GLuint shader = glCreateShader(type);
+		GLint compiled;
+		char *ss;
+		GLint slen;
+
+		ss = loadFile(filename, slen);
+		const char *cs = ss;
+
+		glShaderBinary(1, &shader, GL_SHADER_BINARY_FORMAT_SPIR_V, cs, slen);
+		pfn_glSpecializeShader(shader, "main", 0, NULL, NULL);
+		glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+		if (GL_TRUE != compiled)
+		{
+			printf("Shader not compiled. \n");
 			printShaderInfoLog(shader);
-		} 
-        delete [] ss;
+		}
+		delete[] ss;
 
-        return shader ; 
-    }
+		return shader;
+	}
 
-	shaders_t loadShaders(const char * vert_path, const char * frag_path, const char * geom_path, const char * compute_path) {
+	shaders_t load_spv_shaders(const char *vert_path, const char *frag_path, const char *geom_path, const char *compute_path)
+	{
 		GLuint f = 0, v = 0, g = 0, c = 0;
-        
-        if( vert_path )
-		    v = initshaders( GL_VERTEX_SHADER, vert_path );
-        if( frag_path )
-            f = initshaders( GL_FRAGMENT_SHADER, frag_path );
-        if( geom_path )
-            g = initshaders( GL_GEOMETRY_SHADER, geom_path );
-        if( compute_path )
-            c = initshaders( GL_COMPUTE_SHADER, compute_path );
 
-        shaders_t out; out.vertex = v; out.fragment = f; out.geometry = g;
-        out.compute = c;
+		if (vert_path)
+			v = init_spv_shaders(GL_VERTEX_SHADER, vert_path);
+		if (frag_path)
+			f = init_spv_shaders(GL_FRAGMENT_SHADER, frag_path);
+		if (geom_path)
+			g = init_spv_shaders(GL_GEOMETRY_SHADER, geom_path);
+		if (compute_path)
+			c = init_spv_shaders(GL_COMPUTE_SHADER, compute_path);
+
+		shaders_t out;
+		out.vertex = v;
+		out.fragment = f;
+		out.geometry = g;
+		out.compute = c;
 
 		return out;
 	}
@@ -140,8 +157,48 @@ namespace glslUtility {
 		glGetProgramiv(program,GL_LINK_STATUS, &linked);
 		if (!linked) 
 		{
-			cout << "Program did not link." << endl;
+			printf("Program did not link. \n");
 			printLinkInfoLog(program);
 		}
+	}
+
+	GLenum get_texture_binding_id(int binding_id)
+	{
+		static GLenum texture_binding_id[] = {
+			GL_TEXTURE0,
+			GL_TEXTURE1,
+			GL_TEXTURE2,
+			GL_TEXTURE3,
+			GL_TEXTURE4,
+			GL_TEXTURE5,
+			GL_TEXTURE6,
+			GL_TEXTURE7,
+			GL_TEXTURE8,
+			GL_TEXTURE9,
+			GL_TEXTURE10,
+			GL_TEXTURE11,
+			GL_TEXTURE12,
+			GL_TEXTURE13,
+			GL_TEXTURE14,
+			GL_TEXTURE15,
+			GL_TEXTURE16,
+			GL_TEXTURE17,
+			GL_TEXTURE18,
+			GL_TEXTURE19,
+			GL_TEXTURE20,
+			GL_TEXTURE21,
+			GL_TEXTURE22,
+			GL_TEXTURE23,
+			GL_TEXTURE24,
+			GL_TEXTURE25,
+			GL_TEXTURE26,
+			GL_TEXTURE27,
+			GL_TEXTURE28,
+			GL_TEXTURE29,
+			GL_TEXTURE30,
+			GL_TEXTURE31};
+
+		assert(binding_id < (sizeof(texture_binding_id)/sizeof(texture_binding_id[0])));
+		return texture_binding_id[binding_id];
 	}
 }

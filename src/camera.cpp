@@ -2,13 +2,14 @@
 // Camera Class from the base code of Project 6 of UPenn CIS-565 Fall 2013
 // With modification to use the latest version of GLM
 
-#include <glm/gtx/rotate_vector.hpp>
-#include <glm/glm.hpp>
+#define GLM_SWIZZLE 1
+#include "../3party/glm/glm/gtx/rotate_vector.hpp"
+#include "../3party/glm/glm/glm.hpp"
+
 #include <iostream>
 #include "camera.h"
 
 using namespace glm;
-using namespace std;
 
 void Camera::adjust(float dx, // look left right
         float dy, //look up down

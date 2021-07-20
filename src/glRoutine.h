@@ -11,15 +11,15 @@ typedef struct {
 	glm::vec2 texcoord;
 } vertex2_t;
 
-enum Display {
-    DISPLAY_DEPTH = 0,
-    DISPLAY_NORMAL = 1,
-    DISPLAY_POSITION = 2,
-    DISPLAY_COLOR = 3,
-    DISPLAY_TOTAL = 4,
-    DISPLAY_LIGHTS = 5,
-    DISPLAY_TOON = 6
-};
+//enum Display {
+//    DISPLAY_DEPTH = 0,
+//    DISPLAY_NORMAL = 1,
+//    DISPLAY_POSITION = 2,
+//    DISPLAY_COLOR = 3,
+//    DISPLAY_TOTAL = 4,
+//    DISPLAY_LIGHTS = 5,
+//    DISPLAY_TOON = 6
+//};
 
 enum RenderMode {
     RENDERVOXEL = 1,
@@ -44,14 +44,14 @@ struct Light
 };
 
 
+extern void my_xcb_set_window_title(char const *window_title);
 
-//////////////// GLUT callback functions
-void glut_display();
-void glut_reshape( int w, int h );
-void glut_idle();
-void glut_mouse( int button, int state, int x, int y );
-void glut_motion( int x, int y );
-void glut_keyboard( unsigned char key, int x, int y );
+//////////////// My callback functions
+void my_gl_display();
+void my_gl_reshape( int w, int h );
+void my_x11_motion( int button, int x, int y );
+void my_x11_keyboard(uint8_t key);
+void my_gl_debug_message(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam);
 ////////////////
 
 ///rendering routines

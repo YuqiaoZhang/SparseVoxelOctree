@@ -8,13 +8,14 @@
 #define _VARIABLES_H
 
 #define USE_SPARSE_OCTREE 1
+#define USE_GL_DEBUG 0
 
 //Forward declaration
 class objLoader;
 
 extern int g_width;
 extern int g_height;
-extern int g_winId;
 extern objLoader g_meshloader;
+extern bool g_quit;
 
 #endif

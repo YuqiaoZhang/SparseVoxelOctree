@@ -275,7 +275,7 @@ glmReadMTL(GLMmodel* model, char* name)
 
   file = fopen(filename, "r");
   if (!file) {
-    fprintf(stderr, "glmReadMTL() failed: can't open material file \"%s\".\n",
+    printf("glmReadMTL() failed: can't open material file \"%s\".\n",
 	    filename);
     exit(1);
   }
@@ -445,7 +445,7 @@ glmWriteMTL(GLMmodel* model, char* modelpath, char* mtllibname)
   /* open the file */
   file = fopen(filename, "w");
   if (!file) {
-    fprintf(stderr, "glmWriteMTL() failed: can't open file \"%s\".\n",
+    printf("glmWriteMTL() failed: can't open file \"%s\".\n",
 	    filename);
     exit(1);
   }
@@ -1103,7 +1103,7 @@ glmVertexNormals(GLMmodel* model, GLfloat angle)
        facet normal of every triangle this vertex is in */
     node = members[i];
     if (!node)
-      fprintf(stderr, "glmVertexNormals(): vertex w/o a triangle\n");
+      printf("glmVertexNormals(): vertex w/o a triangle\n");
     average[0] = 0.0; average[1] = 0.0; average[2] = 0.0;
     avg = 0;
     while (node) {
@@ -1362,7 +1362,7 @@ glmReadOBJ(char* filename)
   /* open the file */
   file = fopen(filename, "r");
   if (!file) {
-    fprintf(stderr, "glmReadOBJ() failed: can't open data file \"%s\".\n",
+    printf("glmReadOBJ() failed: can't open data file \"%s\".\n",
 	    filename);
     exit(1);
   }
@@ -1488,7 +1488,7 @@ glmWriteOBJ(GLMmodel* model, char* filename, GLuint mode)
   /* open the file */
   file = fopen(filename, "w");
   if (!file) {
-    fprintf(stderr, "glmWriteOBJ() failed: can't open file \"%s\" to write.\n",
+    printf("glmWriteOBJ() failed: can't open file \"%s\" to write.\n",
 	    filename);
     exit(1);
   }
@@ -1618,149 +1618,6 @@ glmWriteOBJ(GLMmodel* model, char* filename, GLuint mode)
   fclose(file);
 }
 
-/* glmDraw: Renders the model to the current OpenGL context using the
- * mode specified.
- *
- * model    - initialized GLMmodel structure
- * mode     - a bitwise OR of values describing what is to be rendered.
- *            GLM_NONE     -  render with only vertices
- *            GLM_FLAT     -  render with facet normals
- *            GLM_SMOOTH   -  render with vertex normals
- *            GLM_TEXTURE  -  render with texture coords
- *            GLM_COLOR    -  render with colors (color material)
- *            GLM_MATERIAL -  render with materials
- *            GLM_COLOR and GLM_MATERIAL should not both be specified.  
- *            GLM_FLAT and GLM_SMOOTH should not both be specified.  
- */
-GLvoid
-glmDraw(GLMmodel* model, GLuint mode)
-{
-  static GLuint i;
-  static GLMgroup* group;
-  static GLMtriangle* triangle;
-  static GLMmaterial* material;
-
-  assert(model);
-  assert(model->vertices);
-
-  /* do a bit of warning */
-  if (mode & GLM_FLAT && !model->facetnorms) {
-    printf("glmDraw() warning: flat render mode requested "
-	   "with no facet normals defined.\n");
-    mode &= ~GLM_FLAT;
-  }
-  if (mode & GLM_SMOOTH && !model->normals) {
-    printf("glmDraw() warning: smooth render mode requested "
-	   "with no normals defined.\n");
-    mode &= ~GLM_SMOOTH;
-  }
-  if (mode & GLM_TEXTURE && !model->texcoords) {
-    printf("glmDraw() warning: texture render mode requested "
-	   "with no texture coordinates defined.\n");
-    mode &= ~GLM_TEXTURE;
-  }
-  if (mode & GLM_FLAT && mode & GLM_SMOOTH) {
-    printf("glmDraw() warning: flat render mode requested "
-	   "and smooth render mode requested (using smooth).\n");
-    mode &= ~GLM_FLAT;
-  }
-  if (mode & GLM_COLOR && !model->materials) {
-    printf("glmDraw() warning: color render mode requested "
-	   "with no materials defined.\n");
-    mode &= ~GLM_COLOR;
-  }
-  if (mode & GLM_MATERIAL && !model->materials) {
-    printf("glmDraw() warning: material render mode requested "
-	   "with no materials defined.\n");
-    mode &= ~GLM_MATERIAL;
-  }
-  if (mode & GLM_COLOR && mode & GLM_MATERIAL) {
-    printf("glmDraw() warning: color and material render mode requested "
-	   "using only material mode.\n");
-    mode &= ~GLM_COLOR;
-  }
-  if (mode & GLM_COLOR)
-    glEnable(GL_COLOR_MATERIAL);
-  else if (mode & GLM_MATERIAL)
-    glDisable(GL_COLOR_MATERIAL);
-
-  /* perhaps this loop should be unrolled into material, color, flat,
-     smooth, etc. loops?  since most cpu's have good branch prediction
-     schemes (and these branches will always go one way), probably
-     wouldn't gain too much?  */
-
-  group = model->groups;
-  while (group) {
-    if (mode & GLM_MATERIAL) {
-      material = &model->materials[group->material];
-      glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, material->ambient);
-      glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, material->diffuse);
-      glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, material->specular);
-      glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, material->shininess);
-    }
-
-    if (mode & GLM_COLOR) {
-      glColor3fv(material->diffuse);
-    }
-
-    glBegin(GL_TRIANGLES);
-    for (i = 0; i < group->numtriangles; i++) {
-      triangle = &T(group->triangles[i]);
-
-      if (mode & GLM_FLAT)
-	glNormal3fv(&model->facetnorms[3 * triangle->findex]);
-      
-      if (mode & GLM_SMOOTH)
-	glNormal3fv(&model->normals[3 * triangle->nindices[0]]);
-      if (mode & GLM_TEXTURE)
-	glTexCoord2fv(&model->texcoords[2 * triangle->tindices[0]]);
-      glVertex3fv(&model->vertices[3 * triangle->vindices[0]]);
-      
-      if (mode & GLM_SMOOTH)
-	glNormal3fv(&model->normals[3 * triangle->nindices[1]]);
-      if (mode & GLM_TEXTURE)
-	glTexCoord2fv(&model->texcoords[2 * triangle->tindices[1]]);
-      glVertex3fv(&model->vertices[3 * triangle->vindices[1]]);
-      
-      if (mode & GLM_SMOOTH)
-	glNormal3fv(&model->normals[3 * triangle->nindices[2]]);
-      if (mode & GLM_TEXTURE)
-	glTexCoord2fv(&model->texcoords[2 * triangle->tindices[2]]);
-      glVertex3fv(&model->vertices[3 * triangle->vindices[2]]);
-      
-    }
-    glEnd();
-
-    group = group->next;
-  }
-}
-
-/* glmList: Generates and returns a display list for the model using
- * the mode specified.
- *
- * model    - initialized GLMmodel structure
- * mode     - a bitwise OR of values describing what is to be rendered.
- *            GLM_NONE     -  render with only vertices
- *            GLM_FLAT     -  render with facet normals
- *            GLM_SMOOTH   -  render with vertex normals
- *            GLM_TEXTURE  -  render with texture coords
- *            GLM_COLOR    -  render with colors (color material)
- *            GLM_MATERIAL -  render with materials
- *            GLM_COLOR and GLM_MATERIAL should not both be specified.  
- * GLM_FLAT and GLM_SMOOTH should not both be specified.  */
-GLuint
-glmList(GLMmodel* model, GLuint mode)
-{
-  GLuint list;
-
-  list = glGenLists(1);
-  glNewList(list, GL_COMPILE);
-  glmDraw(model, mode);
-  glEndList();
-
-  return list;
-}
-
 /* glmWeld: eliminate (weld) vectors that are within an epsilon of
  * each other.
  *
@@ -1858,7 +1715,7 @@ glmReadPPM(char* filename, int* width, int* height)
 	correct magic cookie for a raw PPM file. */
 	fgets(head, 70, fp);
 	if (strncmp(head, "P6", 2)) {
-		fprintf(stderr, "%s: Not a raw PPM file\n", filename);
+		printf("%s: Not a raw PPM file\n", filename);
 		return NULL;
 	}
 

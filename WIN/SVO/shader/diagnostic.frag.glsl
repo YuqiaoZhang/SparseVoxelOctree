@@ -3,50 +3,56 @@
 // University of Pennsylvania CIS565 final project
 // copyright (c) 2013 Cheng-Tso Lin  
 
-#version 430
+#version 460 core
+
+#extension GL_GOOGLE_include_directive : require
+
+#include "./shader_uniform_location.h"
+
 
 ////////////////////////////
 //       ENUMERATIONS
 ////////////////////////////
 
-#define	DISPLAY_DEPTH 0
-#define	DISPLAY_NORMAL 1
-#define	DISPLAY_POSITION 2
-#define	DISPLAY_COLOR 3
-#define	DISPLAY_TOTAL 4
-#define	DISPLAY_LIGHTS 5
+//#define	DISPLAY_DEPTH 0
+//#define	DISPLAY_NORMAL 1
+//#define	DISPLAY_POSITION 2
+//#define	DISPLAY_COLOR 3
+//#define	DISPLAY_TOTAL 4
+//#define	DISPLAY_LIGHTS 5
 
 /////////////////////////////////////
 // Uniforms, Attributes, and Outputs
 ////////////////////////////////////
-uniform mat4 u_persp;
-uniform mat4 u_modelview;
-uniform mat4 u_lightMVP;
+//uniform layout (location = deferredShader_u_persp) mat4 u_persp;
+uniform layout (location = deferredShader_u_modelview) mat4 u_modelview;
+uniform layout (location = deferredShader_u_lightMVP) mat4 u_lightMVP;
 
-uniform sampler2D u_Depthtex;
-uniform sampler2D u_Normaltex;
-uniform sampler2D u_Positiontex;
-uniform sampler2D u_Colortex;
+uniform layout (binding = deferredShader_u_Depthtex) sampler2D u_Depthtex;
+uniform layout (binding = deferredShader_u_Normaltex) sampler2D u_Normaltex;
+uniform layout (binding = deferredShader_u_Positiontex) sampler2D u_Positiontex;
+uniform layout (binding = deferredShader_u_Colortex) sampler2D u_Colortex;
 
-uniform sampler2D u_shadowmap;
+uniform layout (binding = deferredShader_u_shadowmap) sampler2D u_shadowmap;
 
-uniform float u_Far;
-uniform float u_Near;
-uniform int u_DisplayType;
+uniform layout (location = deferredShader_u_Far) float u_Far;
+uniform layout (location = deferredShader_u_Near) float u_Near;
+//uniform layout (location = deferredShader_u_DisplayType) int u_DisplayType;
 
-uniform int u_ScreenWidth;
-uniform int u_ScreenHeight;
+//uniform layout (location = deferredShader_u_ScreenWidth) int u_ScreenWidth;
+//uniform layout (location = deferredShader_u_ScreenHeight) int u_ScreenHeight;
 
-uniform vec4 u_Light;
-uniform vec3 u_LightColor;
-uniform vec3 u_eyePos;
-in vec2 fs_Texcoord;
+uniform layout (location = deferredShader_u_Light) vec4 u_Light;
+uniform layout (location = deferredShader_u_LightColor) vec3 u_LightColor;
+//uniform layout (location = deferredShader_u_eyePos) vec3 u_eyePos;
 
-out vec4 out_Color;
+layout (location = 0) in vec2 fs_Texcoord;
+
+layout (location = 0) out vec4 out_Color;
 ///////////////////////////////////////
 
-uniform float zerothresh = 1.0f;
-uniform float falloff = 0.1f;
+uniform layout (location = deferredShader_zerothresh) float zerothresh = 1.0f;
+uniform layout (location = deferredShader_falloff) float falloff = 0.1f;
 
 
 /////////////////////////////////////

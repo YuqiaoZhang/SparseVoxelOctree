@@ -3,21 +3,25 @@
 // University of Pennsylvania CIS565 final project
 // copyright (c) 2013 Cheng-Tso Lin  
 
-# version 430
+#version 460 core
+
+#extension GL_GOOGLE_include_directive : require
+
+#include "./shader_uniform_location.h"
 
 layout (location = 0) in vec4 glVertex;
 layout (location = 1) in vec4 glColor;
 layout (location = 2) in vec3 glNormal;
 
-out vec3 v_normal;
-out vec4 v_vertex;
-out uvec3 v_texcoord;
-out vec4 v_color;
+layout (location = 0) out vec3 v_normal;
+layout (location = 1) out vec4 v_vertex;
+layout (location = 2) out uvec3 v_texcoord;
+layout (location = 3) out vec4 v_color;
 
-uniform mat4 u_ModelView;
-uniform mat4 u_Proj;
-uniform mat3 u_Normal;
-uniform int u_voxelDim;
+uniform layout (location = renderVoxelShader_u_ModelView) mat4 u_ModelView;
+uniform layout (location = renderVoxelShader_u_Proj) mat4 u_Proj;
+uniform layout (location = renderVoxelShader_u_Normal) mat3 u_Normal;
+uniform layout (location = renderVoxelShader_u_voxelDim) int u_voxelDim;
 
 void main()
 {

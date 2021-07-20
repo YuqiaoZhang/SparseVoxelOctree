@@ -6,15 +6,20 @@
 //Vertex shader for scene voxelization
 //Using the method described in Ch. 22, OpenGL Insights
 
-# version 430
+#version 460 core
+
+#extension GL_GOOGLE_include_directive : require
+
+#include "./shader_uniform_location.h"
+
 
 layout (location = 0) in vec3 Position;
 layout (location = 1) in vec3 Normal;
 layout (location = 2) in vec2 texcoord;
 
-out vec3 v_vertex;
-out vec3 v_normal;
-out vec2 v_texcoord;
+layout (location = 0) out vec3 v_vertex;
+layout (location = 1) out vec3 v_normal;
+layout (location = 2) out vec2 v_texcoord;
 
 void main()
 {

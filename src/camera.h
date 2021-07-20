@@ -5,7 +5,8 @@
 #ifndef _CAMERA_H
 #define _CAMERA_H
 
-#include <glm/glm.hpp>
+#define GLM_SWIZZLE 1
+#include "../3party/glm/glm/glm.hpp"
 
 class Camera {
 public:

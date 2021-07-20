@@ -3,26 +3,30 @@
 // University of Pennsylvania CIS565 final project
 // copyright (c) 2013 Cheng-Tso Lin  
 
-# version 430
+#version 460 core
+
+#extension GL_GOOGLE_include_directive : require
+
+#include "./shader_uniform_location.h"
 
 layout ( points ) in;
 //layout ( line_strip, max_vertices = 16) out;
 layout ( triangle_strip, max_vertices = 26 ) out;
 //layout ( points, max_vertices = 1 ) out;
-in vec4 v_vertex[];
-in vec4 v_color[];
-in uvec3 v_texcoord[];
-in vec3 v_normal[];
+layout (location = 1) in vec4 v_vertex[];
+layout (location = 3) in vec4 v_color[];
+layout (location = 2) in uvec3 v_texcoord[];
+layout (location = 0) in vec3 v_normal[];
 
-out vec4 f_vertex;
-out vec4 f_color;
-out vec3 f_normal;
+layout (location = 0) out vec4 f_vertex;
+layout (location = 1) out vec4 f_color;
+layout (location = 2) out vec3 f_normal;
 
-uniform mat4 u_ModelView;
-uniform mat4 u_Proj;
-uniform float u_halfDim;
-uniform int u_voxelDim;
-uniform int u_octreeLevel;
+uniform layout (location = renderVoxelShader_u_ModelView) mat4 u_ModelView;
+uniform layout (location = renderVoxelShader_u_Proj) mat4 u_Proj;
+uniform layout (location = renderVoxelShader_u_halfDim) float u_halfDim;
+uniform layout (location = renderVoxelShader_u_voxelDim) int u_voxelDim;
+uniform layout (location = renderVoxelShader_u_octreeLevel) int u_octreeLevel;
 
 //uniform sampler3D u_voxel;
 

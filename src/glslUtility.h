@@ -7,11 +7,8 @@
 
 #include <cstdlib>
 
-#ifdef __APPLE__
-	#include <GL/glfw.h>
-#else
-	#include <GL/glew.h>
-#endif
+#define GL_GLEXT_PROTOTYPES 1
+#include <GL/glcorearb.h>
 
 namespace glslUtility
 {
@@ -24,7 +21,7 @@ namespace glslUtility
         GLuint compute;
 	} shaders_t;
 
-
+shaders_t load_spv_shaders(const char *vert_path, const char *frag_path, const char *geom_path, const char *compute_path = NULL );
 
 shaders_t loadShaders(const char * vert_path, const char * frag_path, const char * geom_path = NULL, const char * compute_path = NULL );
 
@@ -38,6 +35,9 @@ char* loadFile(const char *fname, GLint &fSize);
 void printShaderInfoLog(GLint shader);
 
 void printLinkInfoLog(GLint prog) ;
+
+GLenum get_texture_binding_id(int i);
+
 }
  
 #endif

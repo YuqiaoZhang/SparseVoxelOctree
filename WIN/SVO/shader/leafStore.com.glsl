@@ -3,7 +3,12 @@
 // University of Pennsylvania CIS565 final project
 // copyright (c) 2013 Cheng-Tso Lin  
 
-# version 430
+#version 460 core
+
+#extension GL_GOOGLE_include_directive : require
+
+#include "./shader_uniform_location.h"
+
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1 ) in;
 
 uniform layout(binding = 0, r32ui ) uimageBuffer u_octreeIdx;
@@ -12,11 +17,11 @@ uniform layout(binding = 1, r32ui ) uimageBuffer u_octreeKd;
 uniform layout(binding = 2, rgb10_a2ui ) uimageBuffer u_voxelPos;
 uniform layout(binding = 3, rgba8 ) imageBuffer u_voxelKd;
 
-uniform int u_voxelDim;
-uniform int u_octreeLevel;
-uniform int u_numVoxelFrag;
+uniform layout(location = leafStoreShader_u_voxelDim) int u_voxelDim;
+uniform layout(location = leafStoreShader_u_octreeLevel) int u_octreeLevel;
+uniform layout(location = leafStoreShader_u_numVoxelFrag) int u_numVoxelFrag;
 
-void imageAtomicRGBA8Avg( vec4 val, int coord, layout(r32ui) uimageBuffer buf );
+void imageAtomicRGBA8Avg( vec4 val, int coord );
 uint convVec4ToRGBA8( vec4 val );
 vec4 convRGBA8ToVec4( uint val );
 
@@ -132,7 +137,7 @@ void main()
 	
 	//Use a atomic running average method to prevent buffer saturation
 	//From OpenGL Insight ch. 22
-	imageAtomicRGBA8Avg( color, childIdx, u_octreeKd );
+	imageAtomicRGBA8Avg( color, childIdx );
 }
 
 //UINT atomic running average method
@@ -148,7 +153,7 @@ uint convVec4ToRGBA8( in vec4 val )
     return ( uint(val.w)&0x000000FF)<<24U | (uint(val.z)&0x000000FF)<<16U | (uint(val.y)&0x000000FF)<<8U | (uint(val.x)&0x000000FF);
 }
 
-void imageAtomicRGBA8Avg( vec4 val, int coord, layout(r32ui) uimageBuffer buf )
+void imageAtomicRGBA8Avg( vec4 val, int coord )
 {
     val.rgb *= 255.0;
 	val.a = 1;
@@ -157,7 +162,7 @@ void imageAtomicRGBA8Avg( vec4 val, int coord, layout(r32ui) uimageBuffer buf )
 	uint prev = 0;
 	uint cur;
 	
-	while( (cur = imageAtomicCompSwap( buf, coord, prev, newVal ) ) != prev )
+	while( (cur = imageAtomicCompSwap( u_octreeKd, coord, prev, newVal ) ) != prev )
    {
        prev = cur;
 	   vec4 rval = convRGBA8ToVec4( cur );
@@ -166,6 +171,5 @@ void imageAtomicRGBA8Avg( vec4 val, int coord, layout(r32ui) uimageBuffer buf )
 	   curVal.xyz /= curVal.w;
 	   newVal = convVec4ToRGBA8( curVal );
    }
-
-     
+    
 }

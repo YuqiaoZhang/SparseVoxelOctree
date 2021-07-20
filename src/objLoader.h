@@ -5,7 +5,9 @@
 #ifndef _OBJLOADER_H
 #define _OBJLOADER_H
 
-#include <glm/glm.hpp> 
+#define GLM_SWIZZLE 1
+#include "../3party/glm/glm/glm.hpp"
+
 #include <vector>
 #include <string>
 

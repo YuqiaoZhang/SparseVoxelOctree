@@ -13,8 +13,8 @@
 #ifndef _GLM_H_
 #define _GLM_H_
 
-#include <GL/freeglut.h>
-
+#define GL_GLEXT_PROTOTYPES 1
+#include <GL/glcorearb.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265

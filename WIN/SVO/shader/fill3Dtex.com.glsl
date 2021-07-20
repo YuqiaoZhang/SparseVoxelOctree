@@ -2,7 +2,13 @@
 // 
 // University of Pennsylvania CIS565 final project
 // copyright (c) 2013 Cheng-Tso Lin  
-# version 430
+
+#version 460 core
+
+#extension GL_GOOGLE_include_directive : require
+
+#include "./shader_uniform_location.h"
+
 #define USE_SPARSE_OCTREE 1
 
 #if USE_SPARSE_OCTREE == 1
@@ -14,9 +20,10 @@ layout (local_size_x = 64, local_size_y = 1, local_size_z = 1 ) in;
 uniform layout(binding=0, r8 ) image3D u_voxelImage;
 uniform layout(binding=1, r32ui ) uimageBuffer u_octreeBuf;
 uniform layout(binding=2, rgb10_a2ui) uimageBuffer u_voxelPos;
-uniform int u_octreeLevel;
-uniform int u_voxelDim;
-uniform int u_numVoxelFrag;
+
+uniform layout(location = octreeTo3DtexShader_u_octreeLevel) int u_octreeLevel;
+uniform layout(location = octreeTo3DtexShader_u_voxelDim) int u_voxelDim;
+uniform layout(location = octreeTo3DtexShader_u_numVoxelFrag) int u_numVoxelFrag;
 
 #if USE_SPARSE_OCTREE == 1
 void main()

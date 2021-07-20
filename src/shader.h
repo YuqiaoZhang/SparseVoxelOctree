@@ -18,13 +18,12 @@ class ShaderProgram
 public:
     ShaderProgram();
     virtual ~ShaderProgram();
-    int init( const char* vs_source, const char* fs_source, const char* gs_source = 0 );
+    int init_spv( const char* vs_source, const char* fs_source, const char* gs_source = 0 );
     void use();
     void unuse();
-    void setParameter( shaderAttrib type, void* param, char* name );
-    void setTexParameter( int idx, char* name );
-    void bindAttribLocation( unsigned int idx, char* name );
-    void bindFragDataLocation( unsigned int idx, char* name );
+    void set_parameter(shaderAttrib type, void *param, GLint loc);
+    void bindAttribLocation( unsigned int idx, char const* name );
+    void bindFragDataLocation( unsigned int idx, char const* name );
 protected:
     GLuint vs; //vertex shader
     GLuint fs; //fragment shader
@@ -37,7 +36,7 @@ class ComputeShader: public ShaderProgram
 public:
     ComputeShader();
     ~ComputeShader();
-    int init( const char* cs_source );
+    int init_spv( const char* cs_source );
 };
 
 }

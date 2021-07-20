@@ -3,11 +3,16 @@
 // University of Pennsylvania CIS565 final project
 // copyright (c) 2013 Cheng-Tso Lin 
  
-# version 430
+#version 460 core
+
+#extension GL_GOOGLE_include_directive : require
+
+#include "./shader_uniform_location.h"
+
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1 ) in;
 
-uniform int u_allocStart;
-uniform int u_num;
+uniform layout(location = nodeInitShader_u_allocStart) int u_allocStart;
+uniform layout(location = nodeInitShader_u_num) int u_num;
 
 uniform layout(binding = 0, r32ui ) coherent uimageBuffer u_octreeIdx;
 uniform layout(binding = 1, r32ui ) coherent uimageBuffer u_octreeKd;

@@ -3,17 +3,21 @@
 // University of Pennsylvania CIS565 final project
 // copyright (c) 2013 Cheng-Tso Lin  
 
-# version 430
+#version 460 core
 
-in vec4 f_vertex;
-in vec4 f_color;
-in vec3 f_normal;
-layout (location = 0) out vec4 gl_FragColor;
+#extension GL_GOOGLE_include_directive : require
 
+#include "./shader_uniform_location.h"
+
+layout (location = 0) in vec4 f_vertex;
+layout (location = 1) in vec4 f_color;
+layout (location = 2) in vec3 f_normal;
+
+layout (location = 0) out vec4 out_color;
 
 //uniform sampler3D u_voxel;
 
 void main()
 {
-	gl_FragColor = f_color;
+	out_color = f_color;
 }

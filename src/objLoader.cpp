@@ -3,15 +3,13 @@
 // University of Pennsylvania CIS565 final project
 // copyright (c) 2013 Cheng-Tso Lin  
 
-#include "objloader.h"
+#include "objLoader.h"
 #include <iomanip>
 #include <sstream>
-#include <iostream>
 #include <fstream>
 #include <string>
-#include <glm.h> 
-
-using namespace std;
+#include <string.h>
+#include "../3party/glm.h"
 
 objLoader::objLoader()
 {
@@ -74,10 +72,28 @@ int objLoader::load( string &filename )
                 //newMesh->groups[gid].sampler_id = tid;
                 //tid++;
                 newMesh->groups[gid].tex_filename = mtl->texture_name;
+
+                //WIN to Linux
+                for (int i = 0; newMesh->groups[gid].tex_filename[i] != '\0'; ++i)
+                {
+                    if ('\\' == newMesh->groups[gid].tex_filename[i])
+                    {
+                        newMesh->groups[gid].tex_filename[i] = '/';
+                    }
+                }
             }
-            if( mtl->bumpmap_name != NULL )
+            if (mtl->bumpmap_name != NULL)
             {
                 newMesh->groups[gid].bump_filename = mtl->bumpmap_name;
+
+                //WIN to Linux
+                for (int i = 0; newMesh->groups[gid].bump_filename[i] != '\0'; ++i)
+                {
+                    if ('\\' == newMesh->groups[gid].bump_filename[i])
+                    {
+                        newMesh->groups[gid].bump_filename[i] = '/';
+                    }
+                }
             }
         }
         
@@ -152,7 +168,7 @@ int objLoader::load( string &filename )
 
 
     glmDelete( model );
-    cout<<newMesh->numVert<<" vertices loaded with "<<(newMesh->numIdx/3)<<" faces.\n";
+    printf("%i %s %i %s", newMesh->numVert, "vertices loaded with", (newMesh->numIdx/3), "faces.\n");
 
     models.push_back( newMesh );
     return 1;
@@ -171,7 +187,7 @@ const ObjModel* objLoader::getModel( int idx ) const
     }
     catch ( out_of_range &e )
     {
-        cout<<e.what()<<endl;
+        printf("%s", e.what());
         return NULL;
     }
 }

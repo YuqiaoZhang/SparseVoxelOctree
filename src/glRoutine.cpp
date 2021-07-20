@@ -4,21 +4,27 @@
 // Camera control code originated from basecode offCIS565 project 6
 // copyright (c) 2013 Cheng-Tso Lin  
 
-#define GLM_SWIZZLE
+#define GLM_SWIZZLE 1
+#include "../3party/glm/glm/gtc/matrix_transform.hpp"
+#include "../3party/glm/glm/glm.hpp"
+
+#define GL_GLEXT_PROTOTYPES 1
+#include <GL/glcorearb.h>
+
+#include <string.h>
 #include <iostream>
 #include <vector>
-#include <gl/glew.h>
-#include <gl/freeglut.h>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/glm.hpp>
+
 #include "shader.h"
 #include "glRoutine.h"
 #include "objLoader.h"
 #include "camera.h"
 #include "variables.h"
 #include "util.h"
+#include "glslUtility.h"
 
-using namespace std;
+#include "shader/shader_uniform_location.h"
+
 using namespace glm;
 
 const int NUM_RENDERTARGET = 3;
@@ -117,9 +123,9 @@ GLuint shadowmapTex = 0;
 GLuint FBO[2] = {0,0}; //
 
 enum RenderMode render_mode = RENDERSCENE; 
-enum Display display_type = DISPLAY_NORMAL; 
+//enum Display display_type = DISPLAY_NORMAL; 
 
-void glut_display()
+void my_gl_display()
 {
     //if( render_mode == RENDERVOXEL )
         
@@ -139,15 +145,9 @@ void glut_display()
     {   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
         renderVoxel();
     }
-    glutSwapBuffers();
 }
 
-void glut_idle()
-{
-    glutPostRedisplay();
-}
-
-void glut_reshape( int w, int h )
+void my_gl_reshape( int w, int h )
 {
     if( h == 0 || w == 0 )
         return;
@@ -167,104 +167,100 @@ void glut_reshape( int w, int h )
     //projection = glm::ortho( -1.0f, 1.0f, -1.0f, 1.0f, zNear, zFar );
 }
 
-int mouse_buttons = 0;
 int mouse_old_x = 0;
 int mouse_old_y = 0;
 
-void glut_mouse( int button, int state, int x, int y )
+void my_x11_motion(int button, int x, int y)
 {
-    if (state == GLUT_DOWN) 
+    float dx = (float)(x - mouse_old_x);
+    float dy = (float)(y - mouse_old_y);
+
+
+    if (0 != (button & (1 << 3))) //Right Button
     {
-        mouse_buttons |= 1<<button; 
-    } 
-    else if (state == GLUT_UP) 
-    {
-        mouse_buttons = 0;
+        cam.adjust(-dx * 0.2f, -dy * 0.2f, 0.0f, 0, 0, 0);
     }
+    //else if (0 != (mouse_buttons & (1 << 1))) //Left Button
+    //{
+    //    cam.adjust(0, 0, dx, 0, 0, 0);
+    //}
 
     mouse_old_x = x;
     mouse_old_y = y;
 }
 
-void glut_motion( int x, int y )
-{
-    float dx, dy;
-    dx = (float)(x - mouse_old_x);
-    dy = (float)(y - mouse_old_y);
+#define XEV_KEY_ESC 9
+#define XEV_KEY_1 10
+#define XEV_KEY_2 11
+#define XEV_KEY_3 12
+#define XEV_KEY_Q 24
+#define XEV_KEY_W 25
+#define XEV_KEY_E 26
+#define XEV_KEY_R 27
+#define XEV_KEY_A 38
+#define XEV_KEY_S 39
+#define XEV_KEY_D 40
+#define XEV_KEY_Z 52
 
-    if (mouse_buttons & 1<<GLUT_RIGHT_BUTTON) {
-        cam.adjust(0,0,dx,0,0,0);;
-    }
-    else {
-        cam.adjust(-dx*0.2f,-dy*0.2f,0.0f,0,0,0);
-    }
-
-    mouse_old_x = x;
-    mouse_old_y = y;
-}
-
-void glut_keyboard( unsigned char key, int x, int y )
+void my_x11_keyboard(uint8_t key)
 {
     float tx = 0;
     float ty = 0;
     float tz = 0;
-    switch(key) {
-        case (27):
-            exit(0.0);
+    switch (key)
+    {
+    case XEV_KEY_ESC:
+        g_quit = true;
+        break;
+    case XEV_KEY_1:
+        my_xcb_set_window_title("Sparse Voxel Octree" );
+        render_mode = RENDERSCENE;
+        break;
+    case XEV_KEY_2:
+        my_xcb_set_window_title("Sparse Voxel Octree - 256x256x256 voxels" );
+        render_mode = RENDERVOXEL;
+        if (voxelDim == 256)
             break;
-        case '1':
-            glutSetWindowTitle("SVO" );
-            render_mode = RENDERSCENE;
+        voxelDim = 256;
+        octreeLevel = 8;
+        buildVoxelList();
+        buildSVO();
+        deleteVoxelList();
+        break;
+    case XEV_KEY_3:
+        my_xcb_set_window_title("Sparse Voxel Octree - 128x128x128 voxels" );
+        render_mode = RENDERVOXEL;
+        if (voxelDim == 128)
             break;
-        case '2':
-            glutSetWindowTitle("SVO - 256x256x256 voxels" );
-            render_mode = RENDERVOXEL;
-            if( voxelDim == 256 )
-                break;
-            voxelDim = 256;
-            octreeLevel = 8;
-            buildVoxelList();
-            buildSVO();
-            deleteVoxelList();
-            break;
-        case '3':
-            glutSetWindowTitle("SVO - 128x128x128 voxels" );
-            render_mode = RENDERVOXEL;
-            if( voxelDim == 128 )
-                break;
-            voxelDim = 128;
-            octreeLevel = 7;
-            buildVoxelList();
-            buildSVO();
-            deleteVoxelList();
-            break;
-        case ('w'):
-            tz = -0.01;
-            break;
-        case ('s'):
-            tz = 0.01;
-            break;
-        case ('d'):
-            tx = -0.01;
-            break;
-        case ('a'):
-            tx = 0.01;
-            break;
-        case ('q'):
-            ty = 0.01;
-            break;
-        case ('z'):
-            ty = -0.01;
-            break;
-        case 'r':
-            initShader();
-            break;
-   
+        voxelDim = 128;
+        octreeLevel = 7;
+        buildVoxelList();
+        buildSVO();
+        deleteVoxelList();
+        break;
+    case XEV_KEY_W:
+        tz = -0.01;
+        break;
+    case XEV_KEY_S:
+        tz = 0.01;
+        break;
+    case XEV_KEY_D:
+        tx = -0.01;
+        break;
+    case XEV_KEY_A:
+        tx = 0.01;
+        break;
+    case XEV_KEY_Q:
+        ty = 0.01;
+        break;
+    case XEV_KEY_E:
+        ty = -0.01;
+        break;
     }
 
-    if (abs(tx) > 0 ||  abs(tz) > 0 || abs(ty) > 0) {
-        cam.adjust(0,0,0,tx,ty,tz);
-       
+    if (abs(tx) > 0 || abs(tz) > 0 || abs(ty) > 0)
+    {
+        cam.adjust(0, 0, 0, tx, ty, tz);
     }
 }
 
@@ -279,13 +275,13 @@ void renderVoxel()
     normalMat = transpose( inverse( modelview  ) );
 
     renderVoxelShader.use();
-    renderVoxelShader.setParameter( shader::mat4x4, (void*)&modelview[0][0], "u_ModelView" );
-    renderVoxelShader.setParameter( shader::mat4x4, (void*)&projection[0][0], "u_Proj" );
-    renderVoxelShader.setParameter( shader::mat3x3, (void*)&normalMat[0][0], "u_Normal" );
-    renderVoxelShader.setParameter( shader::i1, (void*)&voxelDim, "u_voxelDim" );
+    renderVoxelShader.set_parameter( shader::mat4x4, (void*)&modelview[0][0], renderVoxelShader_u_ModelView );
+    renderVoxelShader.set_parameter( shader::mat4x4, (void*)&projection[0][0], renderVoxelShader_u_Proj );
+    renderVoxelShader.set_parameter( shader::mat3x3, (void*)&normalMat[0][0], renderVoxelShader_u_Normal );
+    renderVoxelShader.set_parameter( shader::i1, (void*)&voxelDim, renderVoxelShader_u_voxelDim );
     float halfDim = 1.0f/voxelDim;
-    renderVoxelShader.setParameter( shader::f1, (void*)&(halfDim), "u_halfDim" );
-    renderVoxelShader.setParameter( shader::i1, (void*)&octreeLevel, "u_octreeLevel" );
+    renderVoxelShader.set_parameter( shader::f1, (void*)&(halfDim), renderVoxelShader_u_halfDim );
+    renderVoxelShader.set_parameter( shader::i1, (void*)&octreeLevel, renderVoxelShader_u_octreeLevel );
 
     glBindImageTexture( 0, octreeNodeTex[0], 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32UI );
     glBindImageTexture( 1, octreeNodeTex[1], 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32UI );
@@ -322,7 +318,7 @@ void renderScene()
     glDepthFunc( GL_LESS );
     glEnable( GL_CULL_FACE );
     glCullFace( GL_BACK );
-    glEnable(GL_TEXTURE_2D);
+    //glEnable(GL_TEXTURE_2D);
 
     //PASS 1: render scene attributes to textures
     view = cam.get_view();
@@ -332,12 +328,12 @@ void renderScene()
 
     vec4 lightPos = modelview * light1.pos;
     passShader.use();
-    passShader.setParameter( shader::f1, (void*)&zFar, "u_Far" );
-    passShader.setParameter( shader::f1, (void*)&zNear, "u_Near" );
-    passShader.setParameter( shader::mat4x4, (void*)&model[0][0], "u_Model" );
-    passShader.setParameter( shader::mat4x4, (void*)&view[0][0], "u_View" );
-    passShader.setParameter( shader::mat4x4, (void*)&projection[0][0], "u_Persp" );
-    passShader.setParameter( shader::mat4x4, (void*)&normalMat[0][0], "u_InvTrans" );
+    //passShader.setParameter( shader::f1, (void*)&zFar, "u_Far" );
+    //passShader.setParameter( shader::f1, (void*)&zNear, "u_Near" );
+    passShader.set_parameter( shader::mat4x4, (void*)&model[0][0], passShader_u_Model );
+    passShader.set_parameter( shader::mat4x4, (void*)&view[0][0], passShader_u_View );
+    passShader.set_parameter( shader::mat4x4, (void*)&projection[0][0], passShader_u_Persp );
+    passShader.set_parameter( shader::mat4x4, (void*)&normalMat[0][0], passShader_u_InvTrans );
 
     int bTextured;
     int numModel = g_meshloader.getModelCount();
@@ -346,35 +342,39 @@ void renderScene()
         glBindVertexArray( vao[i] );
         const ObjModel* model = g_meshloader.getModel(i);
 
-         glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibo[i] );
-        for( int i = 0; i < model->numGroup; ++i )
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo[i]);
+        for (int i = 0; i < model->numGroup; ++i)
         {
             model->groups[i].shininess = 50;
-            passShader.setParameter( shader::fv3, &model->groups[i].kd, "u_Color" );
-            passShader.setParameter( shader::f1, &model->groups[i].shininess, "u_shininess" );
-            if( model->groups[i].texId > 0 )
+            passShader.set_parameter( shader::fv3, &model->groups[i].kd, passShader_u_Color );
+            passShader.set_parameter( shader::f1, &model->groups[i].shininess,  passShader_u_shininess );
+            if (model->groups[i].texId > 0)
             {
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, model->groups[i].texId );
-                passShader.setTexParameter( 0, "u_colorTex" );
+                glActiveTexture(glslUtility::get_texture_binding_id(passShader_u_colorTex));
+                glBindTexture(GL_TEXTURE_2D, model->groups[i].texId);
+                //passShader.setTexParameter( 0, "u_colorTex" );
                 bTextured = 1;
             }
             else
+            {
                 bTextured = 0;
-            passShader.setParameter( shader::i1, &bTextured, "u_bTextured" );
+            }
+            passShader.set_parameter(shader::i1, &bTextured, passShader_u_bTextured);
 
             if( model->groups[i].bumpTexId > 0 )
             {
-                glActiveTexture(GL_TEXTURE1);
+                glActiveTexture(glslUtility::get_texture_binding_id(passShader_u_bumpTex));
                 glBindTexture(GL_TEXTURE_2D, model->groups[i].bumpTexId );
-                passShader.setTexParameter( 1, "u_bumpTex" );
+                //passShader.setTexParameter( 1, "u_bumpTex" );
                 bTextured = 1;
             }
             else
+            {
                 bTextured = 0;
-            passShader.setParameter( shader::i1, &bTextured, "u_bBump" );
+            }
+            passShader.set_parameter( shader::i1, &bTextured, passShader_u_bBump );
 
-            glDrawElements( GL_TRIANGLES, 3*model->groups[i].numTri , GL_UNSIGNED_INT, (void*)model->groups[i].ibo_offset );
+            glDrawElements( GL_TRIANGLES, 3*model->groups[i].numTri , GL_UNSIGNED_INT, (void*)(intptr_t)model->groups[i].ibo_offset );
             
         }
     }
@@ -394,7 +394,7 @@ void renderScene()
     glBindFramebuffer( GL_FRAMEBUFFER, 0);
    
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_TEXTURE_2D);
+    //glEnable(GL_TEXTURE_2D);
 
     mat4 persp = perspective(45.0f,(float)g_width/(float)g_height,zNear,zFar);
     vec4 test(-2,0,10,1);
@@ -403,41 +403,41 @@ void renderScene()
     vec2 coords = vec2(testh.x, testh.y) / 2.0f + 0.5f;
 
     mat4 biasLightMVP = biasMatrix * light1.mvp;
-    deferredShader.setParameter( shader::mat4x4, &biasLightMVP[0][0], "u_lightMVP" );
-    deferredShader.setParameter( shader::mat4x4, &projection[0][0], "u_persp" );
-    deferredShader.setParameter( shader::mat4x4, &modelview[0][0], "u_modelview" );
+    deferredShader.set_parameter(shader::mat4x4, &biasLightMVP[0][0], deferredShader_u_lightMVP);
+    //deferredShader.set_parameter(shader::mat4x4, &projection[0][0], deferredShader_u_persp);
+    deferredShader.set_parameter(shader::mat4x4, &modelview[0][0], deferredShader_u_modelview);
 
-    deferredShader.setParameter( shader::i1, &g_height, "u_ScreenHeight" );
-    deferredShader.setParameter( shader::i1, &g_width, "u_ScreenWidth" );
-    deferredShader.setParameter( shader::f1, &zFar, "u_Far" );
-    deferredShader.setParameter( shader::f1, &zNear, "u_Near" );
-    deferredShader.setParameter( shader::mat4x4, &persp[0][0], "u_Persp" );
-    deferredShader.setParameter( shader::i1, &display_type, "u_DisplayType" );
+    //deferredShader.set_parameter(shader::i1, &g_height, deferredShader_u_ScreenHeight);
+    //deferredShader.set_parameter(shader::i1, &g_width, deferredShader_u_ScreenWidth);
+    deferredShader.set_parameter(shader::f1, &zFar, deferredShader_u_Far);
+    deferredShader.set_parameter(shader::f1, &zNear, deferredShader_u_Near);
+    //deferredShader.set_parameter(shader::mat4x4, &persp[0][0], deferredShader_u_Persp);
+    //deferredShader.set_parameter(shader::i1, &display_type, deferredShader_u_DisplayType);
 
     eyePos = cam.get_pos();
-    deferredShader.setParameter( shader::fv4, &lightPos[0], "u_Light" );
-    deferredShader.setParameter( shader::fv3, &light1.color[0], "u_LightColor" );
-    deferredShader.setParameter( shader::fv3, &eyePos[0], "u_eyePos" );
+    deferredShader.set_parameter(shader::fv4, &lightPos[0], deferredShader_u_Light);
+    deferredShader.set_parameter(shader::fv3, &light1.color[0], deferredShader_u_LightColor);
+    //deferredShader.set_parameter(shader::fv3, &eyePos[0], deferredShader_u_eyePos);
 
-    glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(glslUtility::get_texture_binding_id(deferredShader_u_Depthtex));
     glBindTexture(GL_TEXTURE_2D, depthFBTex);
-    deferredShader.setTexParameter( 0, "u_Depthtex" );
+    //deferredShader.setTexParameter( 0, "u_Depthtex" );
 
-    glActiveTexture(GL_TEXTURE1);
+    glActiveTexture(glslUtility::get_texture_binding_id(deferredShader_u_Normaltex));
     glBindTexture(GL_TEXTURE_2D, normalFBTex);
-    deferredShader.setTexParameter( 1, "u_Normaltex" );
+    //deferredShader.setTexParameter( 1, "u_Normaltex" );
 
-    glActiveTexture(GL_TEXTURE2);
+    glActiveTexture(glslUtility::get_texture_binding_id(deferredShader_u_Positiontex));
     glBindTexture(GL_TEXTURE_2D, positionFBTex);
-    deferredShader.setTexParameter( 2, "u_Positiontex" );
+    //deferredShader.setTexParameter( 2, "u_Positiontex" );
 
-    glActiveTexture(GL_TEXTURE3);
+    glActiveTexture(glslUtility::get_texture_binding_id(deferredShader_u_Colortex));
     glBindTexture(GL_TEXTURE_2D, colorFBTex);
-    deferredShader.setTexParameter( 3, "u_Colortex" );
+    //deferredShader.setTexParameter( 3, "u_Colortex" );
 
-    glActiveTexture(GL_TEXTURE4);
+    glActiveTexture(glslUtility::get_texture_binding_id(deferredShader_u_shadowmap));
     glBindTexture(GL_TEXTURE_2D, shadowmapTex);
-    deferredShader.setTexParameter( 4, "u_shadowmap" );
+    //deferredShader.setTexParameter( 4, "u_shadowmap" );
 
     //Draw the screen space quad
     glBindVertexArray( vao[QUAD] );
@@ -467,7 +467,7 @@ void renderShadowMap( Light &light )
     mat4 depthModel = mat4(1.0);
     light.mvp = depthProj * depthView * depthModel;
 
-    shadowmapShader.setParameter( shader::mat4x4, &light.mvp[0][0], "u_mvp" );
+    shadowmapShader.set_parameter( shader::mat4x4, &light.mvp[0][0], shadowmapShaderu_mvp );
 
     int bTextured;
     int numModel = g_meshloader.getModelCount();
@@ -476,35 +476,10 @@ void renderShadowMap( Light &light )
         glBindVertexArray( vao[i] );
         const ObjModel* model = g_meshloader.getModel(i);
 
-         glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibo[i] );
+        glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, ibo[i] );
         for( int i = 0; i < model->numGroup; ++i )
         {
-            model->groups[i].shininess = 50;
-            shadowmapShader.setParameter( shader::fv3, &model->groups[i].kd, "u_Color" );
-            shadowmapShader.setParameter( shader::f1, &model->groups[i].shininess, "u_shininess" );
-            if( model->groups[i].texId > 0 )
-            {
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, model->groups[i].texId );
-                shadowmapShader.setTexParameter( 0, "u_colorTex" );
-                bTextured = 1;
-            }
-            else
-                bTextured = 0;
-            shadowmapShader.setParameter( shader::i1, &bTextured, "u_bTextured" );
-
-            if( model->groups[i].bumpTexId > 0 )
-            {
-                glActiveTexture(GL_TEXTURE1);
-                glBindTexture(GL_TEXTURE_2D, model->groups[i].bumpTexId );
-                shadowmapShader.setTexParameter( 1, "u_bumpTex" );
-                bTextured = 1;
-            }
-            else
-                bTextured = 0;
-            shadowmapShader.setParameter( shader::i1, &bTextured, "u_bBump" );
-
-            glDrawElements( GL_TRIANGLES, 3*model->groups[i].numTri , GL_UNSIGNED_INT, (void*)model->groups[i].ibo_offset );
+            glDrawElements( GL_TRIANGLES, 3*model->groups[i].numTri , GL_UNSIGNED_INT, (void*)(intptr_t)model->groups[i].ibo_offset );
             
         }
     }
@@ -619,7 +594,7 @@ void freeFBO()
 
 void bindFBO(int buf)
 {
-    glDisable(GL_TEXTURE_2D);
+    //glDisable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D,0); //Bad mojo to unbind the framebuffer using the texture
     glBindFramebuffer(GL_FRAMEBUFFER, FBO[buf]);
     glClear(GL_DEPTH_BUFFER_BIT);
@@ -629,7 +604,7 @@ void bindFBO(int buf)
 
 void setTextures() 
 {
-    glEnable(GL_TEXTURE_2D);
+    //glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D,0); 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -640,23 +615,22 @@ void setTextures()
 
 void initShader()
 {
-    renderVoxelShader.init( "shader/renderVoxel.vert.glsl", "shader/renderVoxel.frag.glsl", "shader/renderVoxel.geom.glsl");
+    renderVoxelShader.init_spv( "spv_shader/renderVoxel.vert.spv", "spv_shader/renderVoxel.frag.spv", "spv_shader/renderVoxel.geom.spv");
 
-    voxelizeShader.init( "shader/voxelize.vert.glsl", "shader/voxelize.frag.glsl", "shader/voxelize.geom.glsl" );
+    voxelizeShader.init_spv( "spv_shader/voxelize.vert.spv", "spv_shader/voxelize.frag.spv", "spv_shader/voxelize.geom.spv" );
 
-    octreeTo3DtexShader.init( "shader/fill3Dtex.com.glsl" );
+    octreeTo3DtexShader.init_spv( "spv_shader/fill3Dtex.com.spv" );
 
-    nodeFlagShader.init( "shader/nodeFlag.com.glsl" );
-    nodeAllocShader.init( "shader/nodeAlloc.com.glsl" );
-    nodeInitShader.init( "shader/nodeInit.com.glsl" );
+    nodeFlagShader.init_spv( "spv_shader/nodeFlag.com.spv" );
+    nodeAllocShader.init_spv( "spv_shader/nodeAlloc.com.spv" );
+    nodeInitShader.init_spv( "spv_shader/nodeInit.com.spv" );
 
-    leafStoreShader.init( "shader/leafStore.com.glsl" );
-    //mipmapNodeShader.init( "shader/mipmapNode.com.glsl" );
+    leafStoreShader.init_spv( "spv_shader/leafStore.com.spv" );
 
-    passShader.init( "shader/pass.vert.glsl", "shader/pass.frag.glsl" );
-    deferredShader.init( "shader/shade.vert.glsl", "shader/diagnostic.frag.glsl" );
+    passShader.init_spv( "spv_shader/pass.vert.spv", "spv_shader/pass.frag.spv" );
+    deferredShader.init_spv( "spv_shader/shade.vert.spv", "spv_shader/diagnostic.frag.spv" );
 
-    shadowmapShader.init( "shader/shadowmap.vert.glsl", "shader/shadowmap.frag.glsl" );
+    shadowmapShader.init_spv( "spv_shader/shadowmap.vert.spv", "spv_shader/shadowmap.frag.spv" );
 }
 
 void initVertexData()
@@ -704,11 +678,11 @@ void initVertexData()
         for( int i = 0; i < model->numGroup; ++i )
         {
             if( model->groups[i].tex_filename.length() > 0 )
-                model->groups[i].texId = loadTexturFromFile( model->groups[i].tex_filename.c_str(), GL_RGB8, GL_BGR, 2 );
+                model->groups[i].texId = loadTexturFromFile( model->groups[i].tex_filename.c_str(), GL_RGB8, GL_BGR);
             else
                 model->groups[i].texId = 0;
             if( model->groups[i].bump_filename.length() > 0 )
-                model->groups[i].bumpTexId = loadTexturFromFile( model->groups[i].bump_filename.c_str(), GL_RGB8, GL_BGR, 0 );
+                model->groups[i].bumpTexId = loadTexturFromFile( model->groups[i].bump_filename.c_str(), GL_RGB8, GL_BGR);
             else
                 model->groups[i].bumpTexId = 0;
         }
@@ -732,9 +706,9 @@ unsigned int gen2DTexture( int w, int h, GLenum internalFormat,  GLenum format, 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-    glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE, GL_INTENSITY);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    //glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY);
 
     glTexImage2D( GL_TEXTURE_2D, 0, internalFormat, w, h, 0, format, type, 0);
 
@@ -758,8 +732,8 @@ unsigned int gen3DTexture( int dim )
     glTexImage3D( GL_TEXTURE_3D, 0, GL_R8, dim, dim, dim, 0, GL_RED, GL_UNSIGNED_BYTE, data );
     glBindTexture( GL_TEXTURE_3D, 0 );
     GLenum err = glGetError();
-    cout<<glewGetErrorString(err)<<" "<<err<<endl;
-    delete [] data;
+    printf("%s %i \n", "glError", (int)err);
+    delete[] data;
     return texId;
 }
 
@@ -786,7 +760,7 @@ int genLinearBuffer( int size, GLenum format, GLuint* tex, GLuint* tbo )
 
     err = glGetError();
     if( err > 0 )
-        cout<<glewGetErrorString(err)<<endl;
+        printf("%s %i \n", "glError", int(err));
     return err;
 }
 
@@ -920,12 +894,12 @@ void voxelizeScene( int bStore )
 
 
     voxelizeShader.use();
-    voxelizeShader.setParameter( shader::mat4x4, (void*)&mvpX[0][0], "u_MVPx" );
-    voxelizeShader.setParameter( shader::mat4x4, (void*)&mvpY[0][0], "u_MVPy" );
-    voxelizeShader.setParameter( shader::mat4x4, (void*)&mvpZ[0][0], "u_MVPz" );
-    voxelizeShader.setParameter( shader::i1, (void*)&voxelDim, "u_width" );
-    voxelizeShader.setParameter( shader::i1, (void*)&voxelDim, "u_height" );
-    voxelizeShader.setParameter( shader::i1, (void*)&bStore, "u_bStore" );
+    voxelizeShader.set_parameter( shader::mat4x4, (void*)&mvpX[0][0], voxelizeShader_u_MVPx );
+    voxelizeShader.set_parameter( shader::mat4x4, (void*)&mvpY[0][0], voxelizeShader_u_MVPy );
+    voxelizeShader.set_parameter( shader::mat4x4, (void*)&mvpZ[0][0], voxelizeShader_u_MVPz );
+    voxelizeShader.set_parameter( shader::i1, (void*)&voxelDim, voxelizeShader_u_width );
+    voxelizeShader.set_parameter( shader::i1, (void*)&voxelDim, voxelizeShader_u_height );
+    voxelizeShader.set_parameter( shader::i1, (void*)&bStore, voxelizeShader_u_bStore );
 
     glBindBufferBase( GL_ATOMIC_COUNTER_BUFFER, 0, atomicBuffer );
     //Bind image in image location 0
@@ -935,7 +909,7 @@ void voxelizeScene( int bStore )
         glBindImageTexture( 0, voxelPosTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGB10_A2UI );
         glBindImageTexture( 1, voxelKdTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8 );
         glBindImageTexture( 2, voxelNrmlTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16F );
-        voxelizeShader.setTexParameter( 0, "u_voxelPos" );
+        //voxelizeShader.setTexParameter( 0, "u_voxelPos" );
     }
 
     int bTextured;
@@ -949,31 +923,35 @@ void voxelizeScene( int bStore )
         for( int i = 0; i < model->numGroup; ++i )
         {
             model->groups[i].shininess = 50;
-            voxelizeShader.setParameter( shader::fv3, &model->groups[i].kd, "u_Color" );
-            voxelizeShader.setParameter( shader::f1, &model->groups[i].shininess, "u_shininess" );
+            voxelizeShader.set_parameter( shader::fv3, &model->groups[i].kd, voxelizeShader_u_Color );
+            //voxelizeShader.setParameter( shader::f1, &model->groups[i].shininess, "u_shininess" );
             if( model->groups[i].texId > 0 )
             {
-                glActiveTexture(GL_TEXTURE0);
+                glActiveTexture(glslUtility::get_texture_binding_id(voxelizeShader_u_colorTex));
                 glBindTexture(GL_TEXTURE_2D, model->groups[i].texId );
-                voxelizeShader.setTexParameter( 0, "u_colorTex" );
+                //voxelizeShader.setTexParameter( 0, "u_colorTex" );
                 bTextured = 1;
             }
             else
+            {
                 bTextured = 0;
-            voxelizeShader.setParameter( shader::i1, &bTextured, "u_bTextured" );
+            }
+            voxelizeShader.set_parameter( shader::i1, &bTextured, voxelizeShader_u_bTextured );
 
             if( model->groups[i].bumpTexId > 0 )
             {
-                glActiveTexture(GL_TEXTURE1);
+                glActiveTexture(glslUtility::get_texture_binding_id(voxelizeShader_u_bumpTex));
                 glBindTexture(GL_TEXTURE_2D, model->groups[i].bumpTexId );
-                voxelizeShader.setTexParameter( 1, "u_bumpTex" );
+                //voxelizeShader.setTexParameter( 1, "u_bumpTex" );
                 bTextured = 1;
             }
             else
+            {
                 bTextured = 0;
-            voxelizeShader.setParameter( shader::i1, &bTextured, "u_bBump" );
+            }
+            voxelizeShader.set_parameter( shader::i1, &bTextured, voxelizeShader_u_bBump );
 
-            glDrawElements( GL_TRIANGLES, 3*model->groups[i].numTri , GL_UNSIGNED_INT, (void*)model->groups[i].ibo_offset );
+            glDrawElements( GL_TRIANGLES, 3*model->groups[i].numTri , GL_UNSIGNED_INT, (void*)(intptr_t)model->groups[i].ibo_offset );
             
         }
     }
@@ -1003,7 +981,7 @@ void buildVoxelList()
     err = glGetError();
 
     numVoxelFrag = count[0];
-    cout<<"Number of Entries in Voxel Fragment List: "<<numVoxelFrag<<endl;
+    printf("%s %i \n", "Number of Entries in Voxel Fragment List: ", numVoxelFrag);
     //Create buffers for voxel fragment list
     genLinearBuffer( sizeof(GLuint) * numVoxelFrag, GL_R32UI, &voxelPosTex, &voxelPosTbo );
     genLinearBuffer( sizeof(GLuint) * numVoxelFrag, GL_RGBA8, &voxelKdTex, &voxelKdTbo ); 
@@ -1046,10 +1024,10 @@ void buildSVO()
         nTmp *= 8;
         totalNode += nTmp;
     }
-    cout<<"Max possible node: "<<totalNode<<endl;
+    printf("%s %i \n", "Max possible node:", (int)totalNode);
     //Heuristically cut down the allocation size
     //totalNode = 10000000;
-    cout<<"Size of node pool allocated: "<<totalNode<<endl;
+    printf("%s %i \n", "Size of node pool allocated:", (int)totalNode);
     //Create an octree node pool
     //This is for storing child node indices
     genLinearBuffer( sizeof(GLuint)*totalNode , GL_R32UI, &octreeNodeTex[0], &octreeNodeTbo[0] );
@@ -1060,7 +1038,7 @@ void buildSVO()
     //Create an atomic counter for counting # of allocated node tiles, in each octree level
     genAtomicBuffer( 1, allocCounter );
      err = glGetError();
-        cout<<"SVO build alloc "<<glewGetErrorString(err)<<" Error code:"<<err<<endl;
+        printf("%s %s %s %i \n", "SVO build alloc", "glError", "Error code:", (int)err);
     //For each octree level (top to bottom), subdivde nodes in 3 steps
     //1. flag nodes that have child nodes ( one thread for each entries in voexl fragment list )
     //2. allocate buffer space for child nodes ( one thread for each node )
@@ -1075,9 +1053,9 @@ void buildSVO()
     {
         //node flag
         nodeFlagShader.use();
-        nodeFlagShader.setParameter( shader::i1, (void*)&numVoxelFrag, "u_numVoxelFrag" );
-        nodeFlagShader.setParameter( shader::i1, (void*)&i, "u_level" );
-        nodeFlagShader.setParameter( shader::i1, (void*)&voxelDim, "u_voxelDim" );
+        nodeFlagShader.set_parameter( shader::i1, (void*)&numVoxelFrag, nodeFlagShader_u_numVoxelFrag );
+        nodeFlagShader.set_parameter( shader::i1, (void*)&i, nodeFlagShader_u_level );
+        nodeFlagShader.set_parameter( shader::i1, (void*)&voxelDim, nodeFlagShader_u_voxelDim );
         glBindImageTexture( 0, voxelPosTex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGB10_A2UI );
         glBindImageTexture( 1, octreeNodeTex[0], 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI );
         glDispatchCompute(groupDimX, groupDimY, 1 );
@@ -1086,9 +1064,9 @@ void buildSVO()
         //node tile allocation
         nodeAllocShader.use();
         int numThread = allocList[i];
-        nodeAllocShader.setParameter( shader::i1, (void*)&numThread, "u_num" );
-        nodeAllocShader.setParameter( shader::i1, (void*)&nodeOffset, "u_start" );
-        nodeAllocShader.setParameter( shader::i1, (void*)&allocOffset, "u_allocStart" );
+        nodeAllocShader.set_parameter( shader::i1, (void*)&numThread, nodeAllocShader_u_num );
+        nodeAllocShader.set_parameter( shader::i1, (void*)&nodeOffset, nodeAllocShader_u_start );
+        nodeAllocShader.set_parameter( shader::i1, (void*)&allocOffset, nodeAllocShader_u_allocStart );
         glBindImageTexture( 0, octreeNodeTex[0], 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI );
         glBindBufferBase( GL_ATOMIC_COUNTER_BUFFER, 0, allocCounter );
 
@@ -1107,8 +1085,8 @@ void buildSVO()
         //node tile initialization
         int nodeAllocated = tileAllocated * 8;
         nodeInitShader.use();
-        nodeInitShader.setParameter( shader::i1, (void*)&nodeAllocated, "u_num" );
-        nodeInitShader.setParameter( shader::i1, (void*)&allocOffset, "u_allocStart" );
+        nodeInitShader.set_parameter( shader::i1, (void*)&nodeAllocated, nodeInitShader_u_num );
+        nodeInitShader.set_parameter( shader::i1, (void*)&allocOffset, nodeInitShader_u_allocStart );
         glBindImageTexture( 0, octreeNodeTex[0], 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32UI );
         glBindImageTexture( 1, octreeNodeTex[1], 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32UI );
 
@@ -1126,15 +1104,15 @@ void buildSVO()
         allocOffset += nodeAllocated; //allocOffset is the starting address of remaining free space
        
         err = glGetError();
-        cout<<"SVO build iteration "<<glewGetErrorString(err)<<" Error code:"<<err<<endl;
+        printf("%s %s %s %i \n", "SVO build iteration", "glError", "Error code:", (int)err);
     }
-    cout<<"Total nodes consumed: "<<allocOffset<<endl;
+    printf("%s %i \n", "Total nodes consumed: ", (int)allocOffset);
 
     //flag nonempty leaf nodes
     nodeFlagShader.use();
-    nodeFlagShader.setParameter( shader::i1, (void*)&numVoxelFrag, "u_numVoxelFrag" );
-    nodeFlagShader.setParameter( shader::i1, (void*)&octreeLevel, "u_level" );
-    nodeFlagShader.setParameter( shader::i1, (void*)&voxelDim, "u_voxelDim" );
+    nodeFlagShader.set_parameter( shader::i1, (void*)&numVoxelFrag, nodeFlagShader_u_numVoxelFrag );
+    nodeFlagShader.set_parameter( shader::i1, (void*)&octreeLevel, nodeFlagShader_u_level );
+    nodeFlagShader.set_parameter( shader::i1, (void*)&voxelDim, nodeFlagShader_u_voxelDim );
     glBindImageTexture( 0, voxelPosTex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGB10_A2UI );
     glBindImageTexture( 1, octreeNodeTex[0], 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI );
     glDispatchCompute( groupDimX, groupDimY, 1 );
@@ -1142,9 +1120,9 @@ void buildSVO()
 
     //Store surface information ( Color, normal, etc. ) into the octree leaf nodes
     leafStoreShader.use();
-    leafStoreShader.setParameter( shader::i1, (void*)&numVoxelFrag, "u_numVoxelFrag" );
-    leafStoreShader.setParameter( shader::i1, (void*)&octreeLevel, "u_octreeLevel" );
-    leafStoreShader.setParameter( shader::i1, (void*)&voxelDim, "u_voxelDim" );
+    leafStoreShader.set_parameter( shader::i1, (void*)&numVoxelFrag, leafStoreShader_u_numVoxelFrag );
+    leafStoreShader.set_parameter( shader::i1, (void*)&octreeLevel, leafStoreShader_u_octreeLevel );
+    leafStoreShader.set_parameter( shader::i1, (void*)&voxelDim, leafStoreShader_u_voxelDim );
     glBindImageTexture( 0, octreeNodeTex[0], 0, GL_FALSE, 0, GL_READ_ONLY, GL_R32UI );
     glBindImageTexture( 1, octreeNodeTex[1], 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI );
     glBindImageTexture( 2, voxelPosTex, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGB10_A2UI );
@@ -1167,9 +1145,9 @@ void octreeTo3Dtex()
   
 
     octreeTo3DtexShader.use();
-    octreeTo3DtexShader.setParameter( shader::i1, (void*)&octreeLevel, "u_octreeLevel" );
-    octreeTo3DtexShader.setParameter( shader::i1, (void*)&voxelDim, "u_voxelDim" );
-    octreeTo3DtexShader.setParameter( shader::i1, (void*)&numVoxelFrag, "u_numVoxelFrag" );
+    octreeTo3DtexShader.set_parameter( shader::i1, (void*)&octreeLevel, octreeTo3DtexShader_u_octreeLevel );
+    octreeTo3DtexShader.set_parameter( shader::i1, (void*)&voxelDim, octreeTo3DtexShader_u_voxelDim );
+    octreeTo3DtexShader.set_parameter( shader::i1, (void*)&numVoxelFrag, octreeTo3DtexShader_u_numVoxelFrag );
 
     glBindImageTexture( 0, voxelTex, 0, GL_TRUE, voxelDim, GL_WRITE_ONLY, GL_R8 );
 
@@ -1190,4 +1168,85 @@ void initLight()
 {
     light1.pos = light1.initialPos = vec4( 0, 0.43, 0, 1 );
     light1.color = vec3( 1, 1, 1 );
+}
+
+void my_gl_debug_message(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam)
+{
+    char const *str_source;
+    switch (source)
+    {
+    case GL_DEBUG_SOURCE_API:
+        str_source = "API";
+        break;
+    case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+        str_source = "Window_System";
+        break;
+    case GL_DEBUG_SOURCE_SHADER_COMPILER:
+        str_source = "Shader_Compiler";
+        break;
+    case GL_DEBUG_SOURCE_THIRD_PARTY:
+        str_source = "ThirdParty";
+        break;
+    case GL_DEBUG_SOURCE_APPLICATION:
+        str_source = "Application";
+        break;
+    case GL_DEBUG_SOURCE_OTHER:
+        str_source = "Other";
+        break;
+    default:
+        str_source = "Unknown";
+    }
+
+    char const *str_type;
+    switch (type)
+    {
+    case GL_DEBUG_TYPE_ERROR:
+        str_type = "Error";
+        break;
+    case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+        str_type = "Deprecated_Behavior";
+        break;
+    case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+        str_type = "Undefined_Behavior";
+        break;
+    case GL_DEBUG_TYPE_PORTABILITY:
+        str_type = "Portability";
+        break;
+    case GL_DEBUG_TYPE_PERFORMANCE:
+        str_type = "Peformance";
+        break;
+    case GL_DEBUG_TYPE_MARKER:
+        str_type = "Marker";
+        break;
+    case GL_DEBUG_TYPE_PUSH_GROUP:
+        str_type = "Push_Group";
+        break;
+    case GL_DEBUG_TYPE_POP_GROUP:
+        str_type = "Pop_Group";
+        break;
+    }
+
+    char const *str_severity;
+    switch (severity)
+    {
+    case GL_DEBUG_SEVERITY_HIGH:
+        str_severity = "High";
+        break;
+    case GL_DEBUG_SEVERITY_MEDIUM:
+        str_severity = "Medium";
+        break;
+    case GL_DEBUG_SEVERITY_LOW:
+        str_severity = "Low";
+        break;
+    case GL_DEBUG_SEVERITY_NOTIFICATION:
+        str_severity = "Notification";
+        break;
+    default:
+        str_severity = "Unknown";
+    }
+
+    char OutputString[4096];
+    snprintf(OutputString, 4096, "OpenGL Debug Message \n Source_%s \n Type_%s \n ID 0X%08X \n Severity_%s\n %s \n", str_source, str_type, id, str_severity, message);
+    printf("%s\n", OutputString);
+    return;
 }

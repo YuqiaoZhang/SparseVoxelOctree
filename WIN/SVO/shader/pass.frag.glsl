@@ -3,21 +3,25 @@
 // University of Pennsylvania CIS565 final project
 // copyright (c) 2013 Cheng-Tso Lin  
 
-#version 430
+#version 460 core
 
-uniform mat4x4 u_InvTrans;
-uniform float u_Far;
-uniform vec3 u_Color;
-uniform float u_shininess;
-uniform sampler2D u_colorTex;
-uniform sampler2D u_bumpTex;
-uniform int u_bTextured;
-uniform int u_bBump;
+#extension GL_GOOGLE_include_directive : require
 
-in vec3 fs_Normal;
-in vec4 fs_Position;
-in vec2 fs_texcoord;
-in vec4 NDCPos;
+#include "./shader_uniform_location.h"
+
+uniform layout (location = passShader_u_InvTrans) mat4x4 u_InvTrans;
+uniform layout (location = passShader_u_Color) vec3 u_Color;
+uniform layout (location = passShader_u_shininess) float u_shininess;
+uniform layout (location = passShader_u_bTextured) int u_bTextured;
+uniform layout (location = passShader_u_bBump) int u_bBump;
+
+uniform layout(binding = passShader_u_colorTex) sampler2D u_colorTex;
+uniform layout(binding = passShader_u_bumpTex) sampler2D u_bumpTex;
+
+layout (location = 0) in vec3 fs_Normal;
+layout (location = 1) in vec4 fs_Position;
+layout (location = 2) in vec2 fs_texcoord;
+layout (location = 3) in vec4 NDCPos;
 
 layout (location = 0) out vec4 out_Normal;
 layout (location = 1) out vec4 out_Position;

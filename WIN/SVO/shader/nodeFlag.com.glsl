@@ -2,12 +2,18 @@
 // 
 // University of Pennsylvania CIS565 final project
 // copyright (c) 2013 Cheng-Tso Lin  
-# version 430
+
+#version 460 core
+
+#extension GL_GOOGLE_include_directive : require
+
+#include "./shader_uniform_location.h"
+
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1 ) in;
 
-uniform int u_numVoxelFrag;
-uniform int u_level;
-uniform int u_voxelDim;
+uniform layout(location = nodeFlagShader_u_numVoxelFrag) int u_numVoxelFrag;
+uniform layout(location = nodeFlagShader_u_level) int u_level;
+uniform layout(location = nodeFlagShader_u_voxelDim) int u_voxelDim;
 
 uniform layout(binding = 0, rgb10_a2ui ) uimageBuffer u_voxelPos;
 uniform layout(binding = 1, r32ui ) uimageBuffer u_octreeBuf;
